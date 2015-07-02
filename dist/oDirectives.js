@@ -375,73 +375,84 @@ angular.module('envoc.directives.datatables', [
     'ui.bootstrap.pagination'
 ]);
 angular.module('envoc.directives.datatables')
-  .filter('startFrom', function() {
-      return function(input, start) {
-          if (input === undefined) {
-              return input;
-          } else {
-              return input.slice(+start);
-          }
-      };
-  });
-angular.module('envoc.directives.datatables')
-  .provider('oTableConfig', function() {
-    var config = {
-      templates: {
-        oTableLinesPerPageUrl: '/oTemplates/datatables/oTableLinesPerPage.tmpl.html',
-        oTablePageInfoUrl: '/oTemplates/datatables/oTablePageInfo.tmpl.html',
-        oTablePaginationUrl: '/oTemplates/datatables/oTablePagination.tmpl.html'
-      },
-      addLangConfig: addLangConfig,
-      i18n: {
-        en: {
-          show: 'Show',
-          entries: 'entries',
-          filteredFrom: 'filtered from',
-          search: 'Search',
-          loading: 'Loading...',
-          noData: 'No data found...',
-          of: 'of',
-          nextText: 'Next',
-          previousText: 'Previous'
+    .filter('startFrom', startFromFilter);
+
+function startFromFilter() {
+    return startFrom;
+
+    function startFrom(input, start) {
+        if (input === undefined) {
+            return input;
+        } else {
+            return input.slice(+start);
         }
-      },
-      defaultLang: 'en'
+    };
+}
+
+angular.module('envoc.directives.datatables')
+    .provider('oTableConfig', oTableConfigProvider)
+    .controller('oTableCtrl', oTableCtrl)
+    .directive('oTable', oTableDirective)
+    .directive('oTableController', oTableControllerDirective);
+
+function oTableConfigProvider() {
+    var config = {
+        templates: {
+            oTableLinesPerPageUrl: '/oTemplates/datatables/oTableLinesPerPage.tmpl.html',
+            oTablePageInfoUrl: '/oTemplates/datatables/oTablePageInfo.tmpl.html',
+            oTablePaginationUrl: '/oTemplates/datatables/oTablePagination.tmpl.html'
+        },
+        addLangConfig: addLangConfig,
+        i18n: {
+            en: {
+                show: 'Show',
+                entries: 'entries',
+                filteredFrom: 'filtered from',
+                search: 'Search',
+                loading: 'Loading...',
+                noData: 'No data found...',
+                of: 'of',
+                nextText: 'Next',
+                previousText: 'Previous'
+            }
+        },
+        defaultLang: 'en'
     };
     return {
-      config: config,
-      addLangConfig: addLangConfig,
-      $get: function() {
-        return config;
-      }
+        config: config,
+        addLangConfig: addLangConfig,
+        $get: function() {
+            return config;
+        }
     }
 
-    function addLangConfig(key, langConfig){
-      config.i18n[key] = langConfig;
-      config.defaultLang = key;
+    function addLangConfig(key, langConfig) {
+        config.i18n[key] = langConfig;
+        config.defaultLang = key;
     }
-  })
-  .controller('oTableCtrl', ["$scope", "$http", "$filter", "$rootScope", "$timeout", "oTableConfig", function($scope, $http, $filter, $rootScope, $timeout, oTableConfig) {
-    var self      = this;
+}
+
+function oTableCtrl($scope, $http, $filter, $rootScope, $timeout, oTableConfig) {
+    var self = this;
     var dataCache = [];
 
-    var config    = {
-      fetchMethod: null,
-      linesPerPage: 10,
-      throttle: 0,
-      defaultSort: []
+    var config = {
+        fetchMethod: null,
+        linesPerPage: 10,
+        throttle: 0,
+        defaultSort: []
     };
 
     var limitTo, filter, startFrom, orderBy; // filters
 
-    self.init                   = init;
-    self.fetch                  = fetch;
-    self.sortOn                 = sortOn;
-    self.columnFilter           = columnFilter;
+    self.init = init;
+    self.fetch = fetch;
+    self.sortOn = sortOn;
+    self.columnFilter = columnFilter;
     self.getSortingPropertyInfo = getSortingPropertyInfo;
-    self.api                    = {
-      refresh: refresh,
-      setLang: setLang
+    self.api = {
+        refresh: refresh,
+        setLang: setLang
     }
 
     // =================================
@@ -449,129 +460,129 @@ angular.module('envoc.directives.datatables')
     // =================================
 
     function init(config_) {
-      var lang = config_.lang || oTableConfig.defaultLang;
-      self.lang = oTableConfig.i18n[lang];
-      angular.extend(config, config_);
+        var lang = config_.lang || oTableConfig.defaultLang;
+        self.lang = oTableConfig.i18n[lang];
+        angular.extend(config, config_);
 
-      self.paginationSettings = config_.paginationSettings || self.lang;
+        self.paginationSettings = config_.paginationSettings || self.lang;
 
-      if (!config.dataSrcUrl && !config.dataSrc && !config.fetchMethod) {
-        throw new Error('A data source is required');
-      }
-
-      config.dataSrcUrl && (config.fetchMethod = defaultFetch);
-
-      this.state = {
-        currentPage: 1,
-        linesPerPage: config.linesPerPage,
-        iTotalRecords: 0,
-        iTotalDisplayRecords: 0,
-        allSearch: '',
-        sortObj: {},
-        sortOrder: [],
-        searchObj: {}
-      };
-
-      try {
-        var saved;
-        if (config.saveState) {
-          saved = angular.fromJson(localStorage.getItem(config.saveState));
-          if (saved) {
-            angular.extend(this.state, saved);
-            $timeout(function() {
-              $rootScope.$broadcast('oTable::internalStateChanged');
-            });
-          }
+        if (!config.dataSrcUrl && !config.dataSrc && !config.fetchMethod) {
+            throw new Error('A data source is required');
         }
-      } catch (e) {
-        console.log('unable to use saved state');
-      }
+
+        config.dataSrcUrl && (config.fetchMethod = defaultFetch);
+
+        this.state = {
+            currentPage: 1,
+            linesPerPage: config.linesPerPage,
+            iTotalRecords: 0,
+            iTotalDisplayRecords: 0,
+            allSearch: '',
+            sortObj: {},
+            sortOrder: [],
+            searchObj: {}
+        };
+
+        try {
+            var saved;
+            if (config.saveState) {
+                saved = angular.fromJson(localStorage.getItem(config.saveState));
+                if (saved) {
+                    angular.extend(this.state, saved);
+                    $timeout(function() {
+                        $rootScope.$broadcast('oTable::internalStateChanged');
+                    });
+                }
+            }
+        } catch (e) {
+            console.log('unable to use saved state');
+        }
 
 
-      if (config.dataSrc) {
-        initClientSide();
-      } else {
-        initRemoteData();
-      }
+        if (config.dataSrc) {
+            initClientSide();
+        } else {
+            initRemoteData();
+        }
     }
 
     function fetch(forceRefresh) {
-      if (self.waitForInitialSaveStateLoad)
-        return;
+        if (self.waitForInitialSaveStateLoad)
+            return;
 
-      if (!self.fetch.called && config.saveState)
-        self.waitForInitialSaveStateLoad = angular.fromJson(localStorage.getItem(config.saveState));
+        if (!self.fetch.called && config.saveState)
+            self.waitForInitialSaveStateLoad = angular.fromJson(localStorage.getItem(config.saveState));
 
-      var request = createDatatableRequest();
-      if (config.getAdditionalParams) {
-        request = angular.extend(request, config.getAdditionalParams());
-      }
-
-      forceRefresh = typeof forceRefresh == 'boolean' && forceRefresh;
-      if (!forceRefresh && config.fetchMethod.last && angular.toJson(request) == config.fetchMethod.last)
-        return;
-
-      self.loading = null;
-
-      $timeout(function() {
-        if (self.loading == null) {
-          self.loading = true;
+        var request = createDatatableRequest();
+        if (config.getAdditionalParams) {
+            request = angular.extend(request, config.getAdditionalParams());
         }
-      }, 500);
 
-      config
-        .fetchMethod(request)
-        .then(dataFetchSuccess, dataFetchError);
+        forceRefresh = typeof forceRefresh == 'boolean' && forceRefresh;
+        if (!forceRefresh && config.fetchMethod.last && angular.toJson(request) == config.fetchMethod.last)
+            return;
 
-      config.fetchMethod.last = angular.toJson(request);
-      self.fetch.called = true;
+        self.loading = null;
+
+        $timeout(function() {
+            if (self.loading == null) {
+                self.loading = true;
+            }
+        }, 500);
+
+        config
+            .fetchMethod(request)
+            .then(dataFetchSuccess, dataFetchError);
+
+        config.fetchMethod.last = angular.toJson(request);
+        self.fetch.called = true;
     }
 
     function sortOn(shiftKey, propertyName) {
-      var last = self.state.lastSortShifted;
+        var last = self.state.lastSortShifted;
 
-      var val = self.state.sortObj[propertyName];
-      var next = angular.isDefined(val) ? !self.state.sortObj[propertyName] : true;
+        var val = self.state.sortObj[propertyName];
+        var next = angular.isDefined(val) ? !self.state.sortObj[propertyName] : true;
 
-      if (!shiftKey) {
-        self.state.sortObj = {}
-        self.state.sortOrder.length = 0;
-      }
+        if (!shiftKey) {
+            self.state.sortObj = {}
+            self.state.sortOrder.length = 0;
+        }
 
-      var hasKey = self.state.sortOrder.indexOf(propertyName) > -1;
-      if (!hasKey) {
-        self.state.sortOrder.push(propertyName);
-      }
+        var hasKey = self.state.sortOrder.indexOf(propertyName) > -1;
+        if (!hasKey) {
+            self.state.sortOrder.push(propertyName);
+        }
 
-      self.state.sortObj[propertyName] = next;
-      self.state.lastSortShifted = shiftKey;
-      $rootScope.$broadcast('oTable::sorting');
+        self.state.sortObj[propertyName] = next;
+        self.state.lastSortShifted = shiftKey;
+        $rootScope.$broadcast('oTable::sorting');
     };
 
     function columnFilter(searchTerm, propertyName) {
-      var propertyIndex = config.propertyMap[propertyName];
-      self.state.searchObj[propertyName] = searchTerm;
-      if (!searchTerm) {
-        delete self.state.searchObj[propertyName];
-      }
-      $rootScope.$broadcast('oTable::filtering');
+        var propertyIndex = config.propertyMap[propertyName];
+        self.state.searchObj[propertyName] = searchTerm;
+        if (!searchTerm) {
+            delete self.state.searchObj[propertyName];
+        }
+        $rootScope.$broadcast('oTable::filtering');
     };
 
     function getSortingPropertyInfo(propertyName) {
-      return {
-        sorting: isSortingProperty(propertyName),
-        direction: getSortDirection(propertyName)
-      }
+        return {
+            sorting: isSortingProperty(propertyName),
+            direction: getSortDirection(propertyName)
+        }
     }
 
-    function setLang(key){
-      oTableConfig.defaultLang = key;
-      self.lang = oTableConfig.i18n[key];
-      self.paginationSettings = _.extend({}, self.paginationSettings, self.lang);
+    function setLang(key) {
+        oTableConfig.defaultLang = key;
+        self.lang = oTableConfig.i18n[key];
+        self.paginationSettings = _.extend({}, self.paginationSettings, self.lang);
     }
 
     function refresh() {
-      self.fetch(true);
+        self.fetch(true);
     }
 
     // =================================
@@ -579,40 +590,40 @@ angular.module('envoc.directives.datatables')
     // =================================
 
     function calculateVisible() {
-      var clone = angular.copy(dataCache);
+        var clone = angular.copy(dataCache);
 
-      if (self.state.allSearch) {
-        clone = filter(clone, self.state.allSearch);
-        self.state.iTotalDisplayRecords = clone.length;
-      } else {
-        self.state.iTotalDisplayRecords = dataCache.length;
-      }
+        if (self.state.allSearch) {
+            clone = filter(clone, self.state.allSearch);
+            self.state.iTotalDisplayRecords = clone.length;
+        } else {
+            self.state.iTotalDisplayRecords = dataCache.length;
+        }
 
-      var isSorting = self.state.sortOrder.length > 0;
+        var isSorting = self.state.sortOrder.length > 0;
 
-      if (isSorting) {
-        var sortProperty = self.state.sortOrder[0];
-        var sortDirectionPrefix = self.state.sortObj[sortProperty] ? '+' : '-';
-        var sortExpression = sortDirectionPrefix + sortProperty;
-        clone = orderBy(clone, sortExpression);
-      }
+        if (isSorting) {
+            var sortProperty = self.state.sortOrder[0];
+            var sortDirectionPrefix = self.state.sortObj[sortProperty] ? '+' : '-';
+            var sortExpression = sortDirectionPrefix + sortProperty;
+            clone = orderBy(clone, sortExpression);
+        }
 
-      self.state.iTotalRecords = dataCache.length;
-      self.state.pageStartIdx = (self.state.currentPage - 1) * self.state.linesPerPage;
-      if(self.state.pageStartIdx < 0)
-        self.state.pageStartIdx = 0;
+        self.state.iTotalRecords = dataCache.length;
+        self.state.pageStartIdx = (self.state.currentPage - 1) * self.state.linesPerPage;
+        if (self.state.pageStartIdx < 0)
+            self.state.pageStartIdx = 0;
 
-      // handle going off the page
-      while (clone.length && self.state.pageStartIdx >= clone.length) {
-        self.state.currentPage--;
-        calcPageStart();
-      }
+        // handle going off the page
+        while (clone.length && self.state.pageStartIdx >= clone.length) {
+            self.state.currentPage--;
+            calcPageStart();
+        }
 
-      self.data = limitTo(startFrom(clone, self.state.pageStartIdx), self.state.linesPerPage);
-      calcPageStop();
+        self.data = limitTo(startFrom(clone, self.state.pageStartIdx), self.state.linesPerPage);
+        calcPageStop();
 
-      if (config.saveState)
-        updateSavedState();
+        if (config.saveState)
+            updateSavedState();
     }
 
     // =================================
@@ -620,17 +631,17 @@ angular.module('envoc.directives.datatables')
     // =================================
 
     function initClientSide() {
-      limitTo = $filter('limitTo');
-      filter = $filter('filter');
-      startFrom = $filter('startFrom');
-      orderBy = $filter('orderBy');
+        limitTo = $filter('limitTo');
+        filter = $filter('filter');
+        startFrom = $filter('startFrom');
+        orderBy = $filter('orderBy');
 
-      dataCache = config.dataSrc;
-      calculateVisible();
-      setupClientWatches();
+        dataCache = config.dataSrc;
+        calculateVisible();
+        setupClientWatches();
 
-      $rootScope.$on('oTable::sorting', calculateVisible);
-      $rootScope.$on('oTable::filtering', calculateVisible);
+        $rootScope.$on('oTable::sorting', calculateVisible);
+        $rootScope.$on('oTable::filtering', calculateVisible);
     }
 
     // =================================
@@ -638,111 +649,111 @@ angular.module('envoc.directives.datatables')
     // =================================
 
     function initRemoteData() {
-      setupRemoteWatches();
-      $rootScope.$on('oTable::filtering', self.fetch);
-      // $rootScope.$on('oTable::sorting', self.fetch);
+        setupRemoteWatches();
+        $rootScope.$on('oTable::filtering', self.fetch);
+        // $rootScope.$on('oTable::sorting', self.fetch);
     }
 
     function defaultFetch(request) {
-      return $http.post(config.dataSrcUrl, request)
+        return $http.post(config.dataSrcUrl, request)
     }
 
     function mapDefaultSort() {
-      return config.defaultSort.map(function(val, idx) {
-        return {
-          ColumnIndex: val[0],
-          SortDirection: val[1],
-          SearchTerm: (val[2] || null)
-        };
-      });
+        return config.defaultSort.map(function(val, idx) {
+            return {
+                ColumnIndex: val[0],
+                SortDirection: val[1],
+                SearchTerm: (val[2] || null)
+            };
+        });
     }
 
     function createDatatableRequest() {
-      var s = self.state;
-      var filterKeys = angular.extend({}, s.searchObj, s.sortObj);
-      var params = {
-        Skip: (s.currentPage - 1) * s.linesPerPage, // 0
-        Take: s.linesPerPage, //10
-        AllSearch: s.allSearch
-      };
+        var s = self.state;
+        var filterKeys = angular.extend({}, s.searchObj, s.sortObj);
+        var params = {
+            Skip: (s.currentPage - 1) * s.linesPerPage, // 0
+            Take: s.linesPerPage, //10
+            AllSearch: s.allSearch
+        };
 
-      params.Columns = [];
+        params.Columns = [];
 
-      angular.forEach(filterKeys, function(propertyValue, propertyName) {
-        var direction = angular.isDefined(s.sortObj[propertyName]) ? getSortDirection(propertyName) : null;
-        var searchTerm = s.searchObj[propertyName] || null;
-        var propertyIndex = config.propertyMap[propertyName];
+        angular.forEach(filterKeys, function(propertyValue, propertyName) {
+            var direction = angular.isDefined(s.sortObj[propertyName]) ? getSortDirection(propertyName) : null;
+            var searchTerm = s.searchObj[propertyName] || null;
+            var propertyIndex = config.propertyMap[propertyName];
 
-        if (direction || searchTerm) {
-          params.Columns.push({
-            ColumnIndex: propertyIndex,
-            SortDirection: direction,
-            SearchTerm: searchTerm
-          });
+            if (direction || searchTerm) {
+                params.Columns.push({
+                    ColumnIndex: propertyIndex,
+                    SortDirection: direction,
+                    SearchTerm: searchTerm
+                });
+            }
+        });
+
+        if (config.defaultSort.length && !self.state.sortOrder.length) {
+            params.Columns = Array.prototype.concat.apply(params.Columns, mapDefaultSort());
         }
-      });
-
-      if (config.defaultSort.length && !self.state.sortOrder.length) {
-        params.Columns = Array.prototype.concat.apply(params.Columns, mapDefaultSort());
-      }
-      return params;
+        return params;
     }
 
     function isSortingProperty(propertyName) {
-      return self.state.sortOrder.indexOf(propertyName) > -1;
+        return self.state.sortOrder.indexOf(propertyName) > -1;
     }
 
     function getSortDirection(propertyName) {
-      var direction = '';
+        var direction = '';
 
-      if (isSortingProperty(propertyName)) {
-        direction = self.state.sortObj[propertyName] ? 'asc' : 'desc';
-      }
+        if (isSortingProperty(propertyName)) {
+            direction = self.state.sortObj[propertyName] ? 'asc' : 'desc';
+        }
 
-      return direction;
+        return direction;
     }
 
     function transposeDataSet(response) {
-      config.propertyMap = {};
+        config.propertyMap = {};
 
-      var columnArray = response.sColumns.split(',');
-      var transposed = response.aaData.map(convertArrayToObject);
+        var columnArray = response.sColumns.split(',');
+        var transposed = response.aaData.map(convertArrayToObject);
 
-      return transposed;
+        return transposed;
 
-      function convertArrayToObject(valueArray) {
-        var obj = {};
-        columnArray.forEach(mapKeyToIndex);
+        function convertArrayToObject(valueArray) {
+            var obj = {};
+            columnArray.forEach(mapKeyToIndex);
 
-        return obj;
+            return obj;
 
-        function mapKeyToIndex(key, idx) {
-          obj[key] = valueArray[idx];
-          config.propertyMap[key] = idx;
+            function mapKeyToIndex(key, idx) {
+                obj[key] = valueArray[idx];
+                config.propertyMap[key] = idx;
+            }
         }
-      }
     }
 
     function dataFetchSuccess(resp) {
-      self.data = dataCache = transposeDataSet(resp.data);
-      self.state.iTotalRecords = resp.data.iTotalRecords;
-      self.state.iTotalDisplayRecords = resp.data.iTotalDisplayRecords;
-      calcPageStart();
-      calcPageStop();
-      self.loading = false;
+        self.data = dataCache = transposeDataSet(resp.data);
+        self.state.iTotalRecords = resp.data.iTotalRecords;
+        self.state.iTotalDisplayRecords = resp.data.iTotalDisplayRecords;
+        calcPageStart();
+        calcPageStop();
+        self.loading = false;
 
-      if (config.saveState) {
-        if (self.waitForInitialSaveStateLoad)
-          self.state = defaultsShallow(self.state, self.waitForInitialSaveStateLoad);
-        updateSavedState();
-      }
+        if (config.saveState) {
+            if (self.waitForInitialSaveStateLoad)
+                self.state = defaultsShallow(self.state, self.waitForInitialSaveStateLoad);
+            updateSavedState();
+        }
 
-      self.waitForInitialSaveStateLoad = false;
+        self.waitForInitialSaveStateLoad = false;
     }
 
     function dataFetchError() {
-      self.waitForInitialSaveStateLoad = false;
-      alert('Error fetching data');
+        self.waitForInitialSaveStateLoad = false;
+        alert('Error fetching data');
     }
 
     // =================================
@@ -750,32 +761,32 @@ angular.module('envoc.directives.datatables')
     // =================================
 
     function setupClientWatches() {
-      $scope.$watch(watchCurrentPage, calculateVisible);
-      $scope.$watch(watchLinesPerPage, calculateVisible);
-      $scope.$watch(watchAllSearch, calculateVisible);
+        $scope.$watch(watchCurrentPage, calculateVisible);
+        $scope.$watch(watchLinesPerPage, calculateVisible);
+        $scope.$watch(watchAllSearch, calculateVisible);
 
-      $scope.$watchCollection(watchClientDataSrc, calculateVisible);
+        $scope.$watchCollection(watchClientDataSrc, calculateVisible);
     }
 
     function setupRemoteWatches() {
-      config.throttle > 300 && (self.fetch = throttle(self.fetch, config.throttle));
-      $scope.$watch(createDatatableRequest, self.fetch, true);
+        config.throttle > 300 && (self.fetch = throttle(self.fetch, config.throttle));
+        $scope.$watch(createDatatableRequest, self.fetch, true);
     }
 
     function watchCurrentPage() {
-      return self.state.currentPage;
+        return self.state.currentPage;
     }
 
     function watchLinesPerPage() {
-      return self.state.linesPerPage;
+        return self.state.linesPerPage;
     }
 
     function watchAllSearch() {
-      return self.state.allSearch;
+        return self.state.allSearch;
     }
 
     function watchClientDataSrc() {
-      return dataCache;
+        return dataCache;
     }
 
     // =================================
@@ -783,25 +794,25 @@ angular.module('envoc.directives.datatables')
     // =================================
 
     function calcPageStart() {
-      self.state.pageStartIdx = (self.state.currentPage - 1) * self.state.linesPerPage;
+        self.state.pageStartIdx = (self.state.currentPage - 1) * self.state.linesPerPage;
     }
 
     function calcPageStop() {
-      self.state.pageStopIdx = self.state.pageStartIdx + self.data.length;
+        self.state.pageStopIdx = self.state.pageStartIdx + self.data.length;
     }
 
     function updateSavedState() {
-      var savedSettings = {
-        time: +new Date(),
-        allSearch: "",
-        currentPage: 1,
-        linesPerPage: config.linesPerPage
-      };
+        var savedSettings = {
+            time: +new Date(),
+            allSearch: "",
+            currentPage: 1,
+            linesPerPage: config.linesPerPage
+        };
 
-      savedSettings = defaultsShallow(savedSettings, self.state);
-      try {
-        localStorage.setItem(config.saveState, angular.toJson(savedSettings));
-      } catch (e) {}
+        savedSettings = defaultsShallow(savedSettings, self.state);
+        try {
+            localStorage.setItem(config.saveState, angular.toJson(savedSettings));
+        } catch (e) {}
     }
 
     // =================================
@@ -809,81 +820,84 @@ angular.module('envoc.directives.datatables')
     // =================================
 
     function throttle(fn, threshhold, scope) {
-      threshhold || (threshhold = 250);
-      var last,
-        deferTimer;
-      return function() {
-        var context = scope || this;
+        threshhold || (threshhold = 250);
+        var last,
+            deferTimer;
+        return function() {
+            var context = scope || this;
 
-        var now = +new Date,
-          args = arguments;
-        if (last && now < last + threshhold) {
-          // hold on to it
-          clearTimeout(deferTimer);
-          deferTimer = setTimeout(function() {
-            last = now;
-            fn.apply(context, args);
-          }, threshhold);
-        } else {
-          last = now;
-          fn.apply(context, args);
-        }
-      };
+            var now = +new Date,
+                args = arguments;
+            if (last && now < last + threshhold) {
+                // hold on to it
+                clearTimeout(deferTimer);
+                deferTimer = setTimeout(function() {
+                    last = now;
+                    fn.apply(context, args);
+                }, threshhold);
+            } else {
+                last = now;
+                fn.apply(context, args);
+            }
+        };
     }
 
     function defaultsShallow(obj) {
-      var keys = Object.keys(obj),
-        defaultObjects = Array.prototype.slice.call(arguments, 1),
-        result = {};
+        var keys = Object.keys(obj),
+            defaultObjects = Array.prototype.slice.call(arguments, 1),
+            result = {};
 
-      defaultObjects.unshift({});
+        defaultObjects.unshift({});
 
-      var merged = angular.extend.apply({}, defaultObjects);
+        var merged = angular.extend.apply({}, defaultObjects);
 
-      angular.forEach(keys, function(val, idx) {
-        if (angular.isDefined(merged[val]))
-          result[val] = merged[val];
-        else
-          result[val] = obj[val];
-      });
+        angular.forEach(keys, function(val, idx) {
+            if (angular.isDefined(merged[val]))
+                result[val] = merged[val];
+            else
+                result[val] = obj[val];
+        });
 
-      return result;
+        return result;
     }
-  }])
-  .directive('oTable', function() {
-    return {
-      priority: 800,
-      restrict: 'EA',
-      scope: {
-        config: '=',
-        state: '=',
-        exposeApiAs: '='
-      },
-      controller: 'oTableCtrl',
-      controllerAs: 'oTableCtrl',
-      compile: function compile(tElement, tAttrs, transclude) {
-        return function postLink(scope, iElement, iAttrs, controller) {
-          controller.init(scope.config);
-          (scope.state && (scope.state = controller.state));
-          (iAttrs.exposeApiAs && (scope.exposeApiAs = controller.api));
+}
+oTableCtrl.$inject = ["$scope", "$http", "$filter", "$rootScope", "$timeout", "oTableConfig"];
 
-          iElement.addClass('o-table');
-        }
-      }
-    };
-  })
-  .directive('oTableController', function() {
+function oTableDirective() {
     return {
-      restrict: 'A',
-      priority: 1000,
-      scope: true,
-      require: '^oTable',
-      link: function postLink(scope, iElement, iAttrs, controller) {
-        var ctrlName = iAttrs.exposeAs || 'ctrl';
-        scope[ctrlName] = controller;
-      }
+        priority: 800,
+        restrict: 'EA',
+        scope: {
+            config: '=',
+            state: '=',
+            exposeApiAs: '='
+        },
+        controller: 'oTableCtrl',
+        controllerAs: 'oTableCtrl',
+        compile: function compile(tElement, tAttrs, transclude) {
+            return function postLink(scope, iElement, iAttrs, controller) {
+                controller.init(scope.config);
+                (scope.state && (scope.state = controller.state));
+                (iAttrs.exposeApiAs && (scope.exposeApiAs = controller.api));
+
+                iElement.addClass('o-table');
+            }
+        }
     };
-  });
+}
+
+function oTableControllerDirective() {
+    return {
+        restrict: 'A',
+        priority: 1000,
+        scope: true,
+        require: '^oTable',
+        link: function postLink(scope, iElement, iAttrs, controller) {
+            var ctrlName = iAttrs.exposeAs || 'ctrl';
+            scope[ctrlName] = controller;
+        }
+    };
+}
 
 angular.module('envoc.directives.datatables')
     .directive('oTableDefault', function() {
@@ -916,143 +930,167 @@ angular.module('envoc.directives.datatables')
         };
     });
 angular.module('envoc.directives.datatables')
-    .directive('oTableFilter', function() {
-        return {
-            restrict: 'A',
-            scope: true,
-            require: '^oTable',
-            link: function postLink(scope, iElement, iAttrs, controller) {
+    .directive('oTableFilter', oTableFilterDirective)
+    .directive('oTableColumnFilter', oTableColumnFilterDirective);
 
-                scope.$on('oTable::internalStateChanged', function(){
-                  iElement.val(controller.state.allSearch);
-                });
-
-                iElement.on('keyup change', setAllSearch);
-                
-                function setAllSearch(){
-                    scope.$evalAsync(function(){
-                        controller.state.allSearch = iElement.val();
-                    });
-                }
-            }
-        };
-    })
-    .directive('oTableColumnFilter', function() {
-        return {
-            restrict: 'A',
-            scope: true,
-            require: '^oTable',
-            link: function postLink(scope, iElement, iAttrs, controller) {
-                var propertyName = iAttrs.field;
-
-                iElement.on('keyup change', setAllSearch)
-                
-                function setAllSearch(){
-                    scope.$evalAsync(function(){
-                        controller.columnFilter(iElement.val(), propertyName);
-                    });
-                }
-            }
-        };
-    });
-
-angular.module('envoc.directives.datatables')
-  .directive('oTableLinesPerPage', ["oTableConfig", function(oTableConfig) {
+function oTableFilterDirective() {
     return {
-      restrict: 'A',
-      replace: true,
-      scope: true,
-      templateUrl: oTableConfig.templates.oTableLinesPerPageUrl,
-      require: '^oTable',
-      link: function postLink(scope, iElement, iAttrs, controller) {
-        scope.ctrl = controller;
-      }
+        restrict: 'A',
+        scope: true,
+        require: '^oTable',
+        link: postLink
     };
-  }]);
 
-angular.module('envoc.directives.datatables')
-  .directive('oTablePageInfo', ["oTableConfig", function(oTableConfig) {
+    function postLink(scope, iElement, iAttrs, controller) {
+        scope.$on('oTable::internalStateChanged', onInternalStateChanged);
+        iElement.on('keyup change', setAllSearch);
+
+        function onInternalStateChanged(){
+          iElement.val(controller.state.allSearch);
+        }
+        
+        function setAllSearch(){
+            scope.$evalAsync(function(){
+                controller.state.allSearch = iElement.val();
+            });
+        }
+    }
+}
+
+function oTableColumnFilterDirective() {
     return {
-      restrict: 'A',
-      replace: true,
-      scope: true,
-      templateUrl: oTableConfig.templates.oTablePageInfoUrl,
-      require: '^oTable',
-      link: function postLink(scope, iElement, iAttrs, controller) {
-        scope.ctrl = controller;
-      }
+        restrict: 'A',
+        scope: true,
+        require: '^oTable',
+        link: postLink
     };
-  }]);
 
+    function postLink(scope, iElement, iAttrs, controller) {
+        var propertyName = iAttrs.field;
+
+        iElement.on('keyup change', setAllSearch)
+        
+        function setAllSearch(){
+            scope.$evalAsync(function(){
+                controller.columnFilter(iElement.val(), propertyName);
+            });
+        }
+    }
+}
 angular.module('envoc.directives.datatables')
-  .directive('oTablePagination', ["oTableConfig", function(oTableConfig) {
-    return {
-      restrict: 'A',
-      scope: true,
-      templateUrl: oTableConfig.templates.oTablePaginationUrl,
-      require: '^oTable',
-      link: function postLink(scope, iElement, iAttrs, controller) {
-        scope.ctrl = controller;
+  .directive('oTableLinesPerPage', oTableLinesPerPageDirective);
 
-        scope.ctrl.paginationSettings = angular.extend({
-          maxSize: 5,
-          previousText: 'Previous',
-          nextText: 'Next',
-          directionLinks: true,
-          rotate: true
-        }, scope.ctrl.paginationSettings);
-      }
+function oTableLinesPerPageDirective(oTableConfig) {
+  return {
+    restrict: 'A',
+    replace: true,
+    scope: true,
+    templateUrl: oTableConfig.templates.oTableLinesPerPageUrl,
+    require: '^oTable',
+    link: function postLink(scope, iElement, iAttrs, controller) {
+      scope.ctrl = controller;
+    }
+  };
+}
+oTableLinesPerPageDirective.$inject = ["oTableConfig"];
+angular.module('envoc.directives.datatables')
+  .directive('oTablePageInfo', oTablePageInfoDirective);
+
+function oTablePageInfoDirective(oTableConfig) {
+  return {
+    restrict: 'A',
+    replace: true,
+    scope: true,
+    templateUrl: oTableConfig.templates.oTablePageInfoUrl,
+    require: '^oTable',
+    link: function postLink(scope, iElement, iAttrs, controller) {
+      scope.ctrl = controller;
+    }
+  };
+}
+oTablePageInfoDirective.$inject = ["oTableConfig"];
+angular.module('envoc.directives.datatables')
+  .directive('oTablePagination', oTablePagination);
+
+function oTablePagination(oTableConfig) {
+  return {
+    restrict: 'A',
+    scope: true,
+    templateUrl: oTableConfig.templates.oTablePaginationUrl,
+    require: '^oTable',
+    link: postLink
+  };
+
+  function postLink(scope, iElement, iAttrs, controller) {
+    var defaultPaginationSettings = {
+      maxSize: 5,
+      previousText: 'Previous',
+      nextText: 'Next',
+      directionLinks: true,
+      rotate: true
     };
-  }]);
 
+    scope.ctrl = controller;
+    scope.ctrl.paginationSettings = angular
+      .extend(defaultPaginationSettings, scope.ctrl.paginationSettings);
+  }
+}
+oTablePagination.$inject = ["oTableConfig"];
 /*
  * Example use: <th o-table-sort field="id">Id</th>
  * params: (attribute field): this is the case-sensative key to sort on.
  */
 
 angular.module('envoc.directives.datatables')
-    .directive('oTableSort', function() {
-        return {
-            restrict: 'A',
-            scope: true,
-            require: '^oTable',
-            link: function postLink(scope, iElement, iAttrs, controller) {
-                var propertyName = iAttrs.field;
-                iElement.addClass('sorting');
+    .directive('oTableSort', oTableSortDirective);
 
-                scope.$on('oTable::sorting', function() {
-                    var sortInfo = controller.getSortingPropertyInfo(propertyName);
+function oTableSortDirective($document, $window) {
+    return {
+        restrict: 'A',
+        scope: true,
+        require: '^oTable',
+        link: postLink
+    };
 
-                    angular.forEach(['sorting_asc', 'sorting_desc'], function(css) {
-                        iElement.removeClass(css);
-                    });
+    function postLink(scope, iElement, iAttrs, controller) {
+        var propertyName = iAttrs.field;
+        iElement.addClass('sorting');
 
-                    if (sortInfo.sorting) {
-                        iElement.addClass('sorting_' + sortInfo.direction);
-                    }
-                })
+        scope.$on('oTable::sorting', onTableSorting);
+        iElement.on('click', onSortElClick);
 
-                iElement.on('click', function(e) {
-                    clear();
-                    scope.$evalAsync(function(){
-                        controller.sortOn(e.shiftKey, propertyName);
-                    });
-                });
-
-                function clear() {
-                    if (window.getSelection) {
-                        if (window.getSelection().empty) { // Chrome
-                            window.getSelection().empty();
-                        } else if (window.getSelection().removeAllRanges) { // Firefox
-                            window.getSelection().removeAllRanges();
-                        }
-                    } else if (document.selection) { // IE?
-                        document.selection.empty();
-                    }
+        function clear() {
+            if ($window.getSelection) {
+                if ($window.getSelection().empty) { // Chrome
+                    $window.getSelection().empty();
+                } else if ($window.getSelection().removeAllRanges) { // Firefox
+                    $window.getSelection().removeAllRanges();
                 }
+            } else if ($document.selection) { // IE?
+                $document.selection.empty();
             }
-        };
-    });
+        }
+
+        function onSortElClick(e) {
+            clear();
+            scope.$evalAsync(function(){
+                controller.sortOn(e.shiftKey, propertyName);
+            });
+        }
+
+        function onTableSorting() {
+            var sortInfo = controller.getSortingPropertyInfo(propertyName);
+            var sortClasses = ['sorting_asc', 'sorting_desc'];
+
+            angular.forEach(sortClasses, iElement.removeClass);
+
+            if (sortInfo.sorting) {
+                iElement.addClass('sorting_' + sortInfo.direction);
+            }
+        }
+    }
+}
+oTableSortDirective.$inject = ["$document", "$window"];
 (function(module) {
 try {
   module = angular.module('envoc.directives.partials');

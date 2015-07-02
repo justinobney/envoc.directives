@@ -1,40 +1,48 @@
 angular.module('envoc.directives.datatables')
-    .directive('oTableFilter', function() {
-        return {
-            restrict: 'A',
-            scope: true,
-            require: '^oTable',
-            link: function postLink(scope, iElement, iAttrs, controller) {
+    .directive('oTableFilter', oTableFilterDirective)
+    .directive('oTableColumnFilter', oTableColumnFilterDirective);
 
-                scope.$on('oTable::internalStateChanged', function(){
-                  iElement.val(controller.state.allSearch);
-                });
+function oTableFilterDirective() {
+    return {
+        restrict: 'A',
+        scope: true,
+        require: '^oTable',
+        link: postLink
+    };
 
-                iElement.on('keyup change', setAllSearch);
-                
-                function setAllSearch(){
-                    scope.$evalAsync(function(){
-                        controller.state.allSearch = iElement.val();
-                    });
-                }
-            }
-        };
-    })
-    .directive('oTableColumnFilter', function() {
-        return {
-            restrict: 'A',
-            scope: true,
-            require: '^oTable',
-            link: function postLink(scope, iElement, iAttrs, controller) {
-                var propertyName = iAttrs.field;
+    function postLink(scope, iElement, iAttrs, controller) {
+        scope.$on('oTable::internalStateChanged', onInternalStateChanged);
+        iElement.on('keyup change', setAllSearch);
 
-                iElement.on('keyup change', setAllSearch)
-                
-                function setAllSearch(){
-                    scope.$evalAsync(function(){
-                        controller.columnFilter(iElement.val(), propertyName);
-                    });
-                }
-            }
-        };
-    });
+        function onInternalStateChanged(){
+          iElement.val(controller.state.allSearch);
+        }
+        
+        function setAllSearch(){
+            scope.$evalAsync(function(){
+                controller.state.allSearch = iElement.val();
+            });
+        }
+    }
+}
+
+function oTableColumnFilterDirective() {
+    return {
+        restrict: 'A',
+        scope: true,
+        require: '^oTable',
+        link: postLink
+    };
+
+    function postLink(scope, iElement, iAttrs, controller) {
+        var propertyName = iAttrs.field;
+
+        iElement.on('keyup change', setAllSearch)
+        
+        function setAllSearch(){
+            scope.$evalAsync(function(){
+                controller.columnFilter(iElement.val(), propertyName);
+            });
+        }
+    }
+}

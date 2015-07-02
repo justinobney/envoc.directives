@@ -1,10 +1,14 @@
 angular.module('envoc.directives.datatables')
-  .filter('startFrom', function() {
-      return function(input, start) {
-          if (input === undefined) {
-              return input;
-          } else {
-              return input.slice(+start);
-          }
-      };
-  });
+    .filter('startFrom', startFromFilter);
+
+function startFromFilter() {
+    return startFrom;
+
+    function startFrom(input, start) {
+        if (input === undefined) {
+            return input;
+        } else {
+            return input.slice(+start);
+        }
+    };
+}
