@@ -1,5 +1,5 @@
 /*
- * envoc.directives 0.11.0
+ * envoc.directives 0.11.1
  * Author: Envoc
  * Repository: https://github.com/Envoc/envoc.directives
  */
@@ -462,7 +462,9 @@ function oTableCtrl($scope, $http, $filter, $rootScope, $timeout, oTableConfig) 
             throw new Error('A data source is required');
         }
 
-        config.dataSrcUrl && (config.fetchMethod = defaultFetch);
+      if (config.dataSrcUrl && !config.fetchMethod){
+        config.fetchMethod = defaultFetch;
+      }
 
         this.state = {
             currentPage: 1,
